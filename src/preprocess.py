@@ -67,6 +67,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-n_cpus', default=2, type=int)
     parser.add_argument('-train_split', default=-1, type=float)
+    parser.add_argument('-test_split', default=-1, type=float)
 
 
     args = parser.parse_args()

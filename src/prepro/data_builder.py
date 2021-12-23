@@ -345,16 +345,33 @@ def format_to_lines(args):
     files_list = glob.glob(pjoin(args.raw_path, '*.json'))
     if args.train_split > 0:
         train_count = int(args.train_split * len(files_list))
-        print("Auto spliting, total file="+ str(len(files_list)) +" | training set = " + str(args.train_split*100.0) + "% (" + str(train_count) +" records)")
+        logger.info("Auto spliting, total file="+ str(len(files_list)) +" | training set = " + str(args.train_split*100.0) + "% (" + str(train_count) +" records)")
         random.seed(len(files_list))
         random.shuffle(files_list)
         random.seed() #rerandomize
-        for key in files_list[:train_count]:
+
+        train_files_list = files_list[:train_count]
+        valid_files_list = files_list[train_count:]
+        test_files_list = []
+        
+        if args.test_split > 0:
+            test_count = int(args.test_split * len(files_list))
+            logger.info("Auto spliting, total file="+ str(len(files_list)) +" | test set = " + str(args.test_split*100.0) + "% (" + str(test_count) +" records)")
+            val_count = len(files_list) - train_count - test_count
+            new_valid_files_list = valid_files_list[:val_count]
+            test_files_list = valid_files_list[val_count:]
+            valid_files_list = new_valid_files_list             
+        
+        for key in train_files_list:
             corpus_mapping['train'][key] = 1
         
-        for key in files_list[train_count:]:
+        for key in valid_files_list:
             corpus_mapping['valid'][key] = 1
-    
+                
+        for key in test_files_list:
+            corpus_mapping['test'][key] = 1
+
+
     for f in files_list:
         real_name = f.replace("\\","/").split('/')[-1].split('.')[0]
         logger.info("Reading "+ f + " | Real_name = " + real_name)

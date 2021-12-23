@@ -186,10 +186,12 @@ def test_ext(args, device_id, pt, step):
         if (k in model_flags):
             setattr(args, k, opt[k])
     print(args)
-
+    logger.info("device:" + str(device))
+    logger.info("device_id:" + str(device_id))
     model = ExtSummarizer(args, device, checkpoint)
     model.eval()
 
+    logger.info("test_iter started")
     test_iter = data_loader.Dataloader(args, load_dataset(args, 'test', shuffle=False),
                                        args.test_batch_size, device,
                                        shuffle=False, is_test=True)
