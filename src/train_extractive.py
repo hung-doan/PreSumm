@@ -80,7 +80,7 @@ class ErrorHandler(object):
         self.error_thread = threading.Thread(
             target=self.error_listener, daemon=True)
         self.error_thread.start()
-        signal.signal(signal.SIGUSR1, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
 
     def add_child(self, pid):
         """ error handler """
@@ -90,7 +90,7 @@ class ErrorHandler(object):
         """ error listener """
         (rank, original_trace) = self.error_queue.get()
         self.error_queue.put((rank, original_trace))
-        os.kill(os.getpid(), signal.SIGUSR1)
+        os.kill(os.getpid(), signal.SIGTERM)
 
     def signal_handler(self, signalnum, stackframe):
         """ signal handler """

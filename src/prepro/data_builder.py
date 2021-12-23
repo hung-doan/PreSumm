@@ -35,7 +35,7 @@ def load_json(p, lower):
     source = []
     tgt = []
     flag = False
-    for sent in json.load(open(p))['sentences']:
+    for sent in json.load(open(p, encoding='utf-8'))['sentences']:
         tokens = [t['word'] for t in sent['tokens']]
         if (lower):
             tokens = [t.lower() for t in tokens]
@@ -273,6 +273,7 @@ class BertData():
 
 
 def format_to_bert(args):
+    print("Execution format_to_bert")
     if (args.dataset != ''):
         datasets = [args.dataset]
     else:
@@ -280,7 +281,8 @@ def format_to_bert(args):
     for corpus_type in datasets:
         a_lst = []
         for json_f in glob.glob(pjoin(args.raw_path, '*' + corpus_type + '.*.json')):
-            real_name = json_f.split('/')[-1]
+            print("Reading " + json_f)
+            real_name = json_f.replace("\\","/").split('/')[-1]
             a_lst.append((corpus_type, json_f, args, pjoin(args.save_path, real_name.replace('json', 'bert.pt'))))
         print(a_lst)
         pool = Pool(args.n_cpus)
@@ -329,23 +331,46 @@ def _format_to_bert(params):
 
 
 def format_to_lines(args):
+    print("Executing format_to_lines")
+    print(args)
     corpus_mapping = {}
     for corpus_type in ['valid', 'test', 'train']:
         temp = []
-        for line in open(pjoin(args.map_path, 'mapping_' + corpus_type + '.txt')):
+        for line in open(pjoin(args.map_path, 'mapping_' + corpus_type + '.txt'), encoding="utf8"):
             temp.append(hashhex(line.strip()))
         corpus_mapping[corpus_type] = {key.strip(): 1 for key in temp}
     train_files, valid_files, test_files = [], [], []
-    for f in glob.glob(pjoin(args.raw_path, '*.json')):
-        real_name = f.split('/')[-1].split('.')[0]
-        if (real_name in corpus_mapping['valid']):
+
+    corpus_mapping['valid'] = {}
+    files_list = glob.glob(pjoin(args.raw_path, '*.json'))
+    if args.train_split > 0:
+        train_count = int(args.train_split * len(files_list))
+        print("Auto spliting, total file="+ str(len(files_list)) +" | training set = " + str(args.train_split*100.0) + "% (" + str(train_count) +" records)")
+        random.seed(len(files_list))
+        random.shuffle(files_list)
+        random.seed() #rerandomize
+        for key in files_list[:train_count]:
+            corpus_mapping['train'][key] = 1
+        
+        for key in files_list[train_count:]:
+            corpus_mapping['valid'][key] = 1
+    
+    for f in files_list:
+        real_name = f.replace("\\","/").split('/')[-1].split('.')[0]
+        logger.info("Reading "+ f + " | Real_name = " + real_name)
+        if (real_name in corpus_mapping['valid'] or f in  corpus_mapping['valid']):
             valid_files.append(f)
-        elif (real_name in corpus_mapping['test']):
+        elif (real_name in corpus_mapping['test'] or f in  corpus_mapping['test']):
             test_files.append(f)
-        elif (real_name in corpus_mapping['train']):
+        elif (real_name in corpus_mapping['train'] or f in  corpus_mapping['train']):
             train_files.append(f)
         # else:
         #     train_files.append(f)
+
+    logger.info("Total train files: "+ str(len(train_files)))
+    #logger.info(train_files)
+    logger.info("Total validation files: "+ str(len(valid_files)))
+    #logger.info(valid_files)
 
     corpora = {'train': train_files, 'valid': valid_files, 'test': test_files}
     for corpus_type in ['train', 'valid', 'test']:
